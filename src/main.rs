@@ -32,9 +32,5 @@ fn has_valid_kvm_version(kvm: RawFd) -> bool {
     let kvm_api_vernum: i32 =
         unsafe { get_kvm_api_version(kvm, 0).expect("get_kvm_api_version_ERROR") };
     println!("kvm basic api version: {}", kvm_api_vernum);
-    if kvm_api_vernum == 12 {
-        true
-    } else {
-        false
-    }
+    kvm_api_vernum == 12
 }
