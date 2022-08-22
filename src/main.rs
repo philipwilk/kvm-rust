@@ -26,8 +26,8 @@ fn main() {
     // Perform pre-flights
     let pfcs = get_pre_flight_checks();
     // Get notices from pre-flights that match the chosen severity+display them
-    let notices = parse_pre_flight_checks(pfcs, Severity::Notice);
-    if notices.len() == 0 {
+    let notices = parse_pre_flight_checks(pfcs, Severity::Info, vec![]);
+    if notices.is_empty() {
         println!("No notices from pfcs to display");
     } else {
         for i in notices {
@@ -66,19 +66,29 @@ fn get_pre_flight_checks() -> Vec<(Severity, String, String)> {
 fn parse_pre_flight_checks(
     pfcs: Vec<(Severity, String, String)>,
     level: Severity,
+    modifiers: Vec<String>,
 ) -> Vec<(Severity, String, String)> {
     // Checks pfcs for error types, output/remedy issues
-    let mut notices: Vec<(Severity, String, String)> = Vec::new();
+    let mut notices: Vec<(Severity, String, String)> = vec![];
     for pfc in pfcs.iter() {
-        // Check if severity level is greater than notice
-        if pfc.0 <= level {
-            notices.push(pfc.clone());
+        /* Check if severity level is greater than notice
+            Check that either the id is not in the excludes list, or, everything is being excluded and this id is manually included
+            This may need a perfomance rework later
+        */
+        if pfc.0 <= level && !modifiers.contains(&("-".to_owned() + &pfc.1)) {
+            // does NOT remove all and not have it manually added
+            if !(modifiers.contains(&("-all".to_owned()))
+                && !modifiers.contains(&("+".to_owned() + &pfc.1)))
+            {
+                notices.push(pfc.clone());
+            }
         }
     }
     notices
 }
 
 // This is retrieving a NONE type ioctl... by writing nothing... what?
+// Return severity | id | info
 fn has_valid_kvm_version(kvm: RawFd) -> (Severity, String, String) {
     ioctl_write_int_bad!(
         get_kvm_api_version,
