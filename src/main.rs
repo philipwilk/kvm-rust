@@ -75,13 +75,13 @@ fn parse_pre_flight_checks(
             Check that either the id is not in the excludes list, or, everything is being excluded and this id is manually included
             This may need a perfomance rework later
         */
-        if pfc.0 <= level && !modifiers.contains(&("-".to_owned() + &pfc.1)) {
-            // does NOT remove all and not have it manually added
-            if !(modifiers.contains(&("-all".to_owned()))
+        if pfc.0 <= level
+            && !modifiers.contains(&("-".to_owned() + &pfc.1))
+            && !(modifiers.contains(&("-all".to_owned()))
                 && !modifiers.contains(&("+".to_owned() + &pfc.1)))
-            {
-                notices.push(pfc.clone());
-            }
+        {
+            // does NOT remove all and not have it manually added
+            notices.push(pfc.clone());
         }
     }
     notices
