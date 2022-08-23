@@ -47,7 +47,7 @@ fn get_pre_flight_checks() -> Vec<(Severity, String, String)> {
             String:         => unique id for identification by the program
             String:         => description of what happened
     */
-    let mut results: Vec<(Severity, String, String)> = Vec::new();
+    let mut results: Vec<(Severity, String, String)> = vec![];
 
     // Get kvm file descriptor
     let kvm_file = OpenOptions::new()
