@@ -47,6 +47,9 @@ fn get_pre_flight_checks() -> Vec<(Severity, String, String)> {
             String:         => unique id for identification by the program
             String:         => description of what happened
     */
+    /*
+        TODO: implement logserver spec
+    */
     let mut results: Vec<(Severity, String, String)> = vec![];
 
     // Get kvm file descriptor
