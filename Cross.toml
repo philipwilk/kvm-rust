@@ -1,13 +1,2 @@
-[target.x86_64-unknown-linux-gnu]
-pre-build = [
-]
-
 [target.powerpc64-unknown-linux-gnu]
 dockerfile = "ppc64.Containerfile"
-pre-build = [
-  "apt-get update && apt-get install -y --no-install-recommends gnupg2 wget",
-  "wget -O - https://www.ports.debian.org/archive_2022.key | apt-key add -",
-  "printf 'deb http://ftp.ports.debian.org/debian-ports/ sid main' > /etc/apt/sources.list",
-  "dpkg --add-architecture ppc64",
-  "apt-get update && apt-get install --assume-yes --allow-remove-essential libssl-dev:ppc64"
-]

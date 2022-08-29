@@ -19,7 +19,8 @@ main() {
         bzip2 \
         curl \
         make \
-         zlib1g-dev
+        zlib1g-dev \
+        
 
     local td
     td="$(mktemp -d)"

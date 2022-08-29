@@ -46,4 +46,7 @@ ENV CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_LINKER=powerpc64-linux-gnu-gcc \
   BINDGEN_EXTRA_CLANG_ARGS_powerpc64_unknown_linux_gnu="--sysroot=/usr/powerpc64-linux-gnu" \
   QEMU_LD_PREFIX=/usr/powerpc64-linux-gnu \
   RUST_TEST_THREADS=1 \
-  PKG_CONFIG_PATH="/usr/lib/powerpc64-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}" 
+  PKG_CONFIG_PATH="/usr/lib/powerpc64-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}" \
+  OPENSSL_INCLUDE_DIR=/usr/include/powerpc64-linux-gnu/openssl/ \
+  OPENSSL_LIB_DIR=/usr/lib/powerpc64-linux-gnu/ \
+  OPENSSL_DIR=/usr/bin

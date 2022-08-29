@@ -135,9 +135,8 @@ main() {
         libpixman-1-dev \
         libselinux1-dev \
         zlib1g-dev \
-        ninja-build \
-        libssl-dev
-        
+        ninja-build
+
     version=7.0.0
 
 

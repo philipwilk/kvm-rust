@@ -239,8 +239,9 @@ main() {
         "linux-image-${kernel}:${arch}" \
         ncurses-base"${ncurses}" \
         "zlib1g:${arch}" \
+        "openssl:${arch}" \
         "libssl-dev:${arch}"
-
+    
     if [[ "${arch}" != "amd64" ]]; then
         apt-get -d --no-install-recommends download "${libgcc_packages[@]}"
     else
