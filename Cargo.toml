@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 nix = "0.24.2"
-mysql = "22.2.0"
