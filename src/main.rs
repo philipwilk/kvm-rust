@@ -33,7 +33,7 @@ async fn main_async() {
     // Perform pre-flights
     let pfcs = get_startup_checks().await;
     // Get notices from pre-flights that match the chosen severity+display them
-    let notices = parse_pre_flight_checks(pfcs, Severity::Info, vec![]);
+    let notices = async_parse_logs_to_severity(pfcs, Severity::Info, vec![]).await;
     if notices.is_empty() {
         println!("No notices from pfcs to display");
     } else {
@@ -41,7 +41,7 @@ async fn main_async() {
             println!("{}, {}", i.2, i.1);
         }
     }
-    // TODO: function that acts on preflights (attempt recovery/resolution)
+    // TODO: function that acts on logs (attempt recovery/resolution)
 }
 
 async fn get_startup_checks() -> Vec<(Severity, String, String)> {
@@ -68,37 +68,26 @@ async fn get_startup_checks() -> Vec<(Severity, String, String)> {
 }
 
 // Filter out pfcs that are a lower severity level than chosen
-fn parse_pre_flight_checks(
-    pfcs: Vec<(Severity, String, String)>,
+async fn async_parse_logs_to_severity(
+    logs: Vec<(Severity, String, String)>,
     level: Severity,
     modifiers: Vec<String>,
 ) -> Vec<(Severity, String, String)> {
-    // Checks pfcs for error types, output/remedy issues
     let mut notices: Vec<(Severity, String, String)> = vec![];
-    for pfc in pfcs.iter() {
-        /* Check if severity level is greater than notice
+    for log in logs.iter() {
+        /* Check if severity level is greater than notice level\
             Check that either the id is not in the excludes list, or, everything is being excluded and this id is manually included
             This may need a perfomance rework later
         */
-        if pfc.0 <= level
-            && !modifiers.contains(&("-".to_owned() + &pfc.1))
+        if log.0 <= level
+            && !modifiers.contains(&("-".to_owned() + &log.1))
             && !(modifiers.contains(&("-all".to_owned()))
-                && !modifiers.contains(&("+".to_owned() + &pfc.1)))
+                && !modifiers.contains(&("+".to_owned() + &log.1)))
         {
             // does NOT remove all and not have it manually added
-            notices.push(pfc.clone());
+            notices.push(log.clone());
         }
     }
-    notices
-}
-
-async fn async_parse_pre_flight_checks(
-    pfcs: Vec<(Severity, String, String)>,
-    level: Severity,
-    modifiers: Vec<String>,
-) -> Vec<(Severity, String, String)> {
-    let mut notices: Vec<(Severity, String, String)> = vec![];
-
     notices
 }
 
