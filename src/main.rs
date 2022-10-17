@@ -1,3 +1,4 @@
+use futures::{executor::block_on, future::join_all};
 use nix::{ioctl_write_int_bad, request_code_none};
 use std::{
     fs::OpenOptions,
@@ -22,9 +23,15 @@ enum Severity {
     Debug = 7, // Debug level messages                    => Messages that are only of use when debugging the program
 }
 
+// Block initial thread and hand off to async function
 fn main() {
+    block_on(main_async());
+}
+
+// async main wrapper so await/async can be used
+async fn main_async() {
     // Perform pre-flights
-    let pfcs = get_pre_flight_checks();
+    let pfcs = get_startup_checks().await;
     // Get notices from pre-flights that match the chosen severity+display them
     let notices = parse_pre_flight_checks(pfcs, Severity::Info, vec![]);
     if notices.is_empty() {
@@ -37,10 +44,7 @@ fn main() {
     // TODO: function that acts on preflights (attempt recovery/resolution)
 }
 
-/* Run all checks
-    Return all checks along with their severity levels and an info string
-*/
-fn get_pre_flight_checks() -> Vec<(Severity, String, String)> {
+async fn get_startup_checks() -> Vec<(Severity, String, String)> {
     /*  Response result vector
         formatted like:
             Severity::type  => significance of condition. If expected, should be info, otherwise as appropriate
@@ -50,19 +54,17 @@ fn get_pre_flight_checks() -> Vec<(Severity, String, String)> {
     /*
         TODO: implement logserver spec
     */
-    let mut results: Vec<(Severity, String, String)> = vec![];
-
-    // Get kvm file descriptor
-    let kvm_file = OpenOptions::new()
+    let kvm_fd: RawFd = OpenOptions::new()
         .read(true)
         .write(true)
         .open("/dev/kvm")
-        .expect("Failed to open kvm");
-    let kvm_fd: RawFd = kvm_file.into_raw_fd();
-    // Check that the kvm extension is available
-    results.push(has_valid_kvm_version(kvm_fd));
+        .expect("Failed to open kvm")
+        .into_raw_fd();
+    // Run all tests simultaneosly
+    let tests = vec![has_valid_kvm_version(kvm_fd)];
 
-    results
+    // Run all tests and return vector result
+    join_all(tests).await
 }
 
 // Filter out pfcs that are a lower severity level than chosen
@@ -90,9 +92,19 @@ fn parse_pre_flight_checks(
     notices
 }
 
+async fn async_parse_pre_flight_checks(
+    pfcs: Vec<(Severity, String, String)>,
+    level: Severity,
+    modifiers: Vec<String>,
+) -> Vec<(Severity, String, String)> {
+    let mut notices: Vec<(Severity, String, String)> = vec![];
+
+    notices
+}
+
 // This is retrieving a NONE type ioctl... by writing nothing... what?
 // Return severity | id | info
-fn has_valid_kvm_version(kvm: RawFd) -> (Severity, String, String) {
+async fn has_valid_kvm_version(kvm: RawFd) -> (Severity, String, String) {
     ioctl_write_int_bad!(
         get_kvm_api_version,
         request_code_none!(KVM_IOCTL_ID, KVM_GET_API_VER)

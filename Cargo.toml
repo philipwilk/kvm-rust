@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 nix = "0.24.2"
+sea-orm = { version = "^0", features = [ "sqlx-mysql", "runtime-tokio-native-tls", "macros"  ] }
+futures = "0.3"
+async-std = "1.12.0"
