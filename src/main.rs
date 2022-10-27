@@ -1,27 +1,8 @@
-use futures::{executor::block_on, future::join_all};
-use nix::{ioctl_write_int_bad, request_code_none};
-use std::{
-    fs::OpenOptions,
-    os::unix::prelude::{IntoRawFd, RawFd},
-};
-// KVM ioctl id
-const KVM_IOCTL_ID: i32 = 0xAE;
-// ioctl sequence numbers
-const KVM_GET_API_VER: i32 = 0x00;
+use futures::executor::block_on;
 
-// Syslog severity levels
-#[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone)]
-#[allow(dead_code)] // necessary until all enums are used
-enum Severity {
-    Emerg = 0,   // System is unusable                    => A panic condition
-    Alert = 1, // Action must be taken immediately        => Condition that needs immediate correction
-    Crit = 2,  // Critical conditions                     => Hard device errors
-    Err = 3,   // Error conditions
-    Warning = 4, // Warning conditions
-    Notice = 5, // Normal but significant conditions      => Conditions that are not errors but may require special handling
-    Info = 6, // informational messages                   => Confirmation the program is working as expected
-    Debug = 7, // Debug level messages                    => Messages that are only of use when debugging the program
-}
+mod kvm_consts;
+mod logging;
+use crate::logging::{get_parsed_preflights, Severity};
 
 // Block initial thread and hand off to async function
 fn main() {
@@ -30,87 +11,13 @@ fn main() {
 
 // async main wrapper so await/async can be used
 async fn main_async() {
-    // Perform pre-flights
-    let pfcs = get_startup_checks().await;
-    // Get notices from pre-flights that match the chosen severity+display them
-    let notices = async_parse_logs_to_severity(pfcs, Severity::Info, vec![]).await;
-    if notices.is_empty() {
+    let preflight_filters: Vec<String> = vec![];
+    let preflights = get_parsed_preflights(Severity::Info, preflight_filters).await;
+    if preflights.is_empty() {
         println!("No notices from pfcs to display");
     } else {
-        for i in notices {
+        for i in preflights {
             println!("{}, {}", i.2, i.1);
         }
-    }
-    // TODO: function that acts on logs (attempt recovery/resolution)
-}
-
-async fn get_startup_checks() -> Vec<(Severity, String, String)> {
-    /*  Response result vector
-        formatted like:
-            Severity::type  => significance of condition. If expected, should be info, otherwise as appropriate
-            String:         => unique id for identification by the program
-            String:         => description of what happened
-    */
-    /*
-        TODO: implement logserver spec
-    */
-    let kvm_fd: RawFd = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/kvm")
-        .expect("Failed to open kvm")
-        .into_raw_fd();
-    // Run all tests simultaneosly
-    let tests = vec![has_valid_kvm_version(kvm_fd)];
-
-    // Run all tests and return vector result
-    join_all(tests).await
-}
-
-// Filter out pfcs that are a lower severity level than chosen
-async fn async_parse_logs_to_severity(
-    logs: Vec<(Severity, String, String)>,
-    level: Severity,
-    modifiers: Vec<String>,
-) -> Vec<(Severity, String, String)> {
-    let mut notices: Vec<(Severity, String, String)> = vec![];
-    for log in logs.iter() {
-        /* Check if severity level is greater than notice level\
-            Check that either the id is not in the excludes list, or, everything is being excluded and this id is manually included
-            This may need a perfomance rework later
-        */
-        if log.0 <= level
-            && !modifiers.contains(&("-".to_owned() + &log.1))
-            && !(modifiers.contains(&("-all".to_owned()))
-                && !modifiers.contains(&("+".to_owned() + &log.1)))
-        {
-            // does NOT remove all and not have it manually added
-            notices.push(log.clone());
-        }
-    }
-    notices
-}
-
-// This is retrieving a NONE type ioctl... by writing nothing... what?
-// Return severity | id | info
-async fn has_valid_kvm_version(kvm: RawFd) -> (Severity, String, String) {
-    ioctl_write_int_bad!(
-        get_kvm_api_version,
-        request_code_none!(KVM_IOCTL_ID, KVM_GET_API_VER)
-    );
-    let kvm_api_vernum: i32 =
-        unsafe { get_kvm_api_version(kvm, 0).expect("get_kvm_api_version_ERROR") };
-    if kvm_api_vernum == 12 {
-        (
-            Severity::Info,
-            "has_kvm_api".to_string(),
-            "Basic kvm api found".to_string(),
-        )
-    } else {
-        (
-            Severity::Emerg,
-            "has_kvm_api".to_string(),
-            "Failed to get basic kvm api".to_string(),
-        )
     }
 }
