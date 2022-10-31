@@ -10,8 +10,10 @@ use std::str::FromStr;
 /*
   Make value set to 0 for boolean parameters (no value) and 1 for keys with values
 */
+#[allow(dead_code)] // necessary until all enums are used
 pub enum Parameters {
     NoPreflights = 0,
+    UserLogSeverityLevel = 1,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone, Hash)]
@@ -28,6 +30,7 @@ impl FromStr for Parameters {
     fn from_str(input: &str) -> Result<Parameters, Self::Err> {
         match input {
             "NoPreflights" => Ok(Parameters::NoPreflights),
+            "UserLogSeverityLevel" => Ok(Parameters::UserLogSeverityLevel),
             _ => Err(()),
         }
     }
@@ -62,6 +65,7 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
         --key=value
         --key value
         -key
+            would like --key to work
         command parameter --key value -key
     */
     lazy_static! {
@@ -72,8 +76,8 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
 
     let mut args_hashmap: HashMap<Parameters, String> = HashMap::new();
     while raw_arg_vecd.len() > 0 {
+        println!("{raw_arg_vecd:?}");
         let front = raw_arg_vecd.pop_front().unwrap();
-        let original_front = front.clone();
         let key_format: KeyFormat;
         // Need to isolate the key from the value (if a value is present)
         // check if --key=value format
@@ -94,8 +98,7 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
         // Check key is real parameter
         let parsed_front_key: String = (if key_format == KeyFormat::Equals {
             let vals = front.split("=").collect::<Vec<&str>>();
-            #[allow(unused_assignments)]
-            equals_val = vals[1].to_owned();
+            raw_arg_vecd.push_front(vals[1].to_owned());
             vals[0].clone().to_owned()
         } else {
             front
@@ -106,11 +109,11 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
         let front_key: Parameters;
         match front_key_res {
             Ok(_) => front_key = front_key_res.unwrap(),
-            Err(_) => return Err("Invalid parameter: ".to_owned() + &original_front),
+            Err(_) => return Err("Invalid parameter: ".to_owned() + &parsed_front_key),
         }
 
-        if key_format == KeyFormat::Space && raw_arg_vecd.len() < 1 {
-            return Err("Space formatted parameter without value: ".to_owned() + &original_front);
+        if key_format == KeyFormat::Space && front_key as u8 == 1 && raw_arg_vecd.len() < 1 {
+            return Err("Space formatted parameter without value: ".to_owned() + &parsed_front_key);
         } else if key_format == KeyFormat::Space {
             equals_val = raw_arg_vecd.pop_front().unwrap();
         } else {
@@ -119,19 +122,24 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
 
         if key_format == KeyFormat::Boolean && front_key as u8 == 1 {
             return Err(
-                "Use of key+value parameter as boolean parameter: ".to_owned() + &original_front,
+                "Use of key+value parameter as boolean parameter: ".to_owned() + &parsed_front_key,
             );
         }
-        if key_format != KeyFormat::Boolean && front_key as u8 == 0 {
-            return Err(
-                "Use of boolean parameter as a valued parameter: ".to_owned() + &original_front,
-            );
+        if key_format == KeyFormat::Equals && front_key as u8 == 0 {
+            equals_val = raw_arg_vecd.pop_front().unwrap();
+            if equals_val.to_lowercase() == "true" {
+                equals_val = "True".to_owned();
+            } else if equals_val.to_lowercase() == "false" {
+                equals_val = "False".to_owned();
+            } else {
+                return Err("Use of equals formatted binary parameter without a value".to_owned());
+            }
+        }
+        if key_format == KeyFormat::Boolean {
+            equals_val = "True".to_owned();
         }
 
-        match key_format {
-            KeyFormat::Boolean => args_hashmap.insert(front_key, parsed_front_key),
-            KeyFormat::Equals | KeyFormat::Space => args_hashmap.insert(front_key, equals_val),
-        };
+        args_hashmap.insert(front_key, equals_val);
     }
 
     Ok(args_hashmap)
