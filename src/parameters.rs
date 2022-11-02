@@ -99,6 +99,7 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
         let parsed_front_key: String = (if key_format == KeyFormat::Equals {
             let vals = front.split("=").collect::<Vec<&str>>();
             raw_arg_vecd.push_front(vals[1].to_owned());
+            println!("{raw_arg_vecd:?}");
             vals[0].clone().to_owned()
         } else {
             front
@@ -114,10 +115,23 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
 
         if key_format == KeyFormat::Space && front_key as u8 == 1 && raw_arg_vecd.len() < 1 {
             return Err("Space formatted parameter without value: ".to_owned() + &parsed_front_key);
-        } else if key_format == KeyFormat::Space {
+        } else if key_format == KeyFormat::Space && front_key as u8 == 0 {
+            // if binary param
             equals_val = raw_arg_vecd.pop_front().unwrap();
+            if equals_val.to_lowercase() == "true" {
+                equals_val = "True".to_owned();
+            } else if equals_val.to_lowercase() == "false" {
+                equals_val = "False".to_owned();
+            } else if equals_val == "" {
+                equals_val = "True".to_owned();
+            } else {
+                return Err(
+                    "Use of equals formatted binary parameter with invalid value: ".to_owned()
+                        + &equals_val,
+                );
+            }
         } else {
-            equals_val = "".to_owned();
+            equals_val = raw_arg_vecd.pop_front().unwrap();
         }
 
         if key_format == KeyFormat::Boolean && front_key as u8 == 1 {
@@ -125,14 +139,13 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
                 "Use of key+value parameter as boolean parameter: ".to_owned() + &parsed_front_key,
             );
         }
-        if key_format == KeyFormat::Equals && front_key as u8 == 0 {
-            equals_val = raw_arg_vecd.pop_front().unwrap();
-            if equals_val.to_lowercase() == "true" {
-                equals_val = "True".to_owned();
-            } else if equals_val.to_lowercase() == "false" {
-                equals_val = "False".to_owned();
-            } else {
-                return Err("Use of equals formatted binary parameter without a value".to_owned());
+        if key_format == KeyFormat::Equals {
+            if front_key as u8 == 0 {
+                if equals_val.to_lowercase() == "true" {
+                    equals_val = "True".to_owned();
+                } else if equals_val.to_lowercase() == "false" {
+                    equals_val = "False".to_owned();
+                }
             }
         }
         if key_format == KeyFormat::Boolean {
