@@ -76,7 +76,6 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
 
     let mut args_hashmap: HashMap<Parameters, String> = HashMap::new();
     while raw_arg_vecd.len() > 0 {
-        println!("{raw_arg_vecd:?}");
         let front = raw_arg_vecd.pop_front().unwrap();
         let key_format: KeyFormat;
         // Need to isolate the key from the value (if a value is present)
@@ -99,7 +98,6 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
         let parsed_front_key: String = (if key_format == KeyFormat::Equals {
             let vals = front.split("=").collect::<Vec<&str>>();
             raw_arg_vecd.push_front(vals[1].to_owned());
-            println!("{raw_arg_vecd:?}");
             vals[0].clone().to_owned()
         } else {
             front
