@@ -3,6 +3,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::env::{args, Args};
+use std::fmt;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -10,17 +11,18 @@ use std::str::FromStr;
 /*
   Make value set to 0 for boolean parameters (no value) and 1 for keys with values
 */
-#[allow(dead_code)] // necessary until all enums are used
 pub enum Parameters {
-    NoPreflights = 0,
-    UserLogSeverityLevel = 1,
+    NoPreflights,
+    UserLogSeverityLevel,
+    LogFilters,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone, Hash)]
-enum KeyFormat {
-    Equals,
-    Space,
-    Boolean,
+fn param_is_bool_type(params: &Parameters) -> bool {
+    match params {
+        Parameters::NoPreflights => true,
+        Parameters::LogFilters => false,
+        Parameters::UserLogSeverityLevel => false,
+    }
 }
 
 // tryfrom implementation, almost definitely not mine iirc
@@ -31,9 +33,24 @@ impl FromStr for Parameters {
         match input {
             "NoPreflights" => Ok(Parameters::NoPreflights),
             "UserLogSeverityLevel" => Ok(Parameters::UserLogSeverityLevel),
+            "LogFilters" => Ok(Parameters::LogFilters),
             _ => Err(()),
         }
     }
+}
+
+// https://stackoverflow.com/a/32712140
+impl fmt::Display for Parameters {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone, Hash)]
+enum KeyFormat {
+    Equals,
+    Space,
+    Boolean,
 }
 
 pub async fn get_parameters() -> HashMap<Parameters, String> {
@@ -111,34 +128,47 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
             Err(_) => return Err("Invalid parameter: ".to_owned() + &parsed_front_key),
         }
 
-        if key_format == KeyFormat::Space && front_key as u8 == 1 && raw_arg_vecd.len() < 1 {
+        if key_format == KeyFormat::Space
+            && !param_is_bool_type(&front_key)
+            && raw_arg_vecd.len() < 1
+            || raw_arg_vecd.len() > 0
+                && REGEX_EQUALS.is_match(&raw_arg_vecd.front().unwrap())
+                    | REGEX_SPACE.is_match(&raw_arg_vecd.front().unwrap())
+                    | REGEX_BOOLEAN.is_match(&raw_arg_vecd.pop_front().unwrap())
+        {
             return Err("Space formatted parameter without value: ".to_owned() + &parsed_front_key);
-        } else if key_format == KeyFormat::Space && front_key as u8 == 0 {
+        } else if key_format == KeyFormat::Space && param_is_bool_type(&front_key) {
             // if binary param
-            equals_val = raw_arg_vecd.pop_front().unwrap();
-            if equals_val.to_lowercase() == "true" {
-                equals_val = "True".to_owned();
-            } else if equals_val.to_lowercase() == "false" {
-                equals_val = "False".to_owned();
-            } else if equals_val == "" {
-                equals_val = "True".to_owned();
+            if raw_arg_vecd.len() > 0
+                && !REGEX_EQUALS.is_match(&raw_arg_vecd.front().unwrap())
+                && !REGEX_SPACE.is_match(&raw_arg_vecd.front().unwrap())
+                && !REGEX_BOOLEAN.is_match(&raw_arg_vecd.front().unwrap())
+            {
+                equals_val = raw_arg_vecd.pop_front().unwrap();
+                if equals_val.to_lowercase() == "true" {
+                    equals_val = "True".to_owned();
+                } else if equals_val.to_lowercase() == "false" {
+                    equals_val = "False".to_owned();
+                } else {
+                    return Err(
+                        "Use of equals formatted binary parameter with invalid value: ".to_owned()
+                            + &equals_val,
+                    );
+                }
             } else {
-                return Err(
-                    "Use of equals formatted binary parameter with invalid value: ".to_owned()
-                        + &equals_val,
-                );
+                equals_val = "True".to_owned();
             }
         } else {
             equals_val = raw_arg_vecd.pop_front().unwrap();
         }
 
-        if key_format == KeyFormat::Boolean && front_key as u8 == 1 {
+        if key_format == KeyFormat::Boolean && !param_is_bool_type(&front_key) {
             return Err(
                 "Use of key+value parameter as boolean parameter: ".to_owned() + &parsed_front_key,
             );
         }
         if key_format == KeyFormat::Equals {
-            if front_key as u8 == 0 {
+            if param_is_bool_type(&front_key) {
                 if equals_val.to_lowercase() == "true" {
                     equals_val = "True".to_owned();
                 } else if equals_val.to_lowercase() == "false" {
@@ -152,6 +182,41 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
 
         args_hashmap.insert(front_key, equals_val);
     }
-
     Ok(args_hashmap)
+}
+
+pub fn parameters_has_key_and_its_value(
+    parameters: &HashMap<Parameters, String>,
+    key: &Parameters,
+) -> Result<bool, String> {
+    if parameters.contains_key(key) {
+        let value = parameters.get(key).unwrap();
+        if value == "True" {
+            Ok(true)
+        } else if value == "False" {
+            Ok(false)
+        } else {
+            return Err("I tried to get a binary value from key \"".to_owned()
+                + &key.to_string()
+                + "\" but couldn't find one");
+        }
+    } else {
+        Ok(false)
+    }
+}
+
+// try to find a key in the parameter hashmap and then split the param at commas and return the vec, on return an empty vec
+pub fn parameters_to_vec_or_new(
+    parameters: &HashMap<Parameters, String>,
+    key: &Parameters,
+) -> Vec<String> {
+    let mut ret: Vec<String> = vec![];
+    if parameters.contains_key(&key) {
+        parameters
+            .get(&key)
+            .unwrap()
+            .split(",")
+            .for_each(|x| ret.push(x.to_owned()));
+    }
+    ret
 }
