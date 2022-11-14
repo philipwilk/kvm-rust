@@ -2,6 +2,12 @@
 dockerfile = "cross/ppc64.Containerfile"
 pre-build = "cross/powerpc64.sh"
 
+[target.powerpc64le-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes libssl-dev:amd64 libssl-dev:$CROSS_DEB_ARCH"
+]
+
 [target.x86_64-unknown-linux-gnu]
 pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
@@ -11,7 +17,7 @@ pre-build = [
 [target.aarch64-unknown-linux-gnu]
 pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
+    "apt-get update && apt-get install --assume-yes libssl-dev:amd64 libssl-dev:$CROSS_DEB_ARCH"
 ]
 
 [target.armv7-unknown-linux-gnueabihf]
