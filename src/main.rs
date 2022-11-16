@@ -5,6 +5,7 @@ use futures::executor::block_on;
 mod kvm_consts;
 mod logging;
 mod parameters;
+mod kvm;
 
 use crate::logging::{get_parsed_preflights, Severity};
 use crate::parameters::{
