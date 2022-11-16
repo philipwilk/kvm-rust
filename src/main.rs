@@ -2,11 +2,12 @@
 
 use futures::executor::block_on;
 
+mod kvm;
 mod kvm_consts;
 mod logging;
 mod parameters;
-mod kvm;
 
+use crate::kvm::{create_vm, get_kvm_fd};
 use crate::logging::{get_parsed_preflights, Severity};
 use crate::parameters::{
     get_parameters, parameters_has_key_and_its_value, parameters_to_vec_or_new, Parameters,
@@ -21,6 +22,7 @@ fn main() {
 async fn main_async() {
     let parameters = get_parameters().await;
 
+    // Run checks prior to application start
     if !parameters_has_key_and_its_value(&parameters, &Parameters::NoPreflights).unwrap() {
         let preflight_filters: Vec<String> =
             parameters_to_vec_or_new(&parameters, &Parameters::UserLogSeverityLevel);
@@ -33,4 +35,12 @@ async fn main_async() {
             }
         }
     }
+    /*
+        Fetch db data
+    */
+
+    /*
+        Use db data to decide what todo
+    */
+    create_vm(get_kvm_fd().await).await;
 }

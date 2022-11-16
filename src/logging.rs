@@ -1,11 +1,9 @@
 use futures::future::join_all;
-use std::{
-    fs::OpenOptions,
-    os::unix::prelude::{IntoRawFd, RawFd},
-};
+use std::os::unix::prelude::RawFd;
 
 mod has_kvm_ver;
 
+use crate::kvm::get_kvm_fd;
 use crate::logging::has_kvm_ver::main as has_kvm_ver;
 
 // Syslog severity levels
@@ -46,7 +44,7 @@ pub async fn async_parse_logs_to_severity(
     notices
 }
 
-async fn get_startup_checks() -> Vec<(Severity, String, String)> {
+async fn get_startup_checks(kvm_fd: RawFd) -> Vec<(Severity, String, String)> {
     /*  Response result vector
         formatted like:
             Severity::type  => significance of condition. If expected, should be info, otherwise as appropriate
@@ -56,12 +54,6 @@ async fn get_startup_checks() -> Vec<(Severity, String, String)> {
     /*
         TODO: implement logserver spec
     */
-    let kvm_fd: RawFd = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/kvm")
-        .expect("Failed to open kvm")
-        .into_raw_fd();
     // Run all tests simultaneosly
     let tests = vec![has_kvm_ver(kvm_fd)];
 
@@ -73,7 +65,12 @@ pub async fn get_parsed_preflights(
     _level: Severity,
     _modifiers: Vec<String>,
 ) -> Vec<(Severity, String, String)> {
-    async_parse_logs_to_severity(get_startup_checks().await, _level, _modifiers).await
+    async_parse_logs_to_severity(
+        get_startup_checks(get_kvm_fd().await).await,
+        _level,
+        _modifiers,
+    )
+    .await
 }
 
 // TODO: function that acts on logs (attempt recovery/resolution)
