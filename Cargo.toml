@@ -20,3 +20,8 @@ exitcode = "1.1.2"
 strip = true
 lto = true
 incremental = true
+overflow-checks = true
+
+[profile.dev]
+opt-level = 0
+incremental = true
