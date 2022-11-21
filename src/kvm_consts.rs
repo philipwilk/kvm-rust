@@ -1,3 +1,4 @@
+use std::ffi::c_void;
 // KVM ioctl id
 pub const KVM_IOCTL_ID: i32 = 0xAE;
 // ioctl sequence numbers
@@ -8,9 +9,9 @@ pub const KVM_SET_USER_MEMORY_REGION: i32 = 0x46;
 // Structs
 #[derive(Debug)]
 pub struct KvmUserspaceMemoryRegion {
-    slot: u32,
-    flags: u32,
-    guest_phys_addr: u64,
-    memory_size: u64, 
-    userspace_addr: u64,
+    slot: usize,
+    flags: usize,
+    guest_phys_addr: usize,
+    memory_size: usize,
+    userspace_addr: *mut c_void,
 }

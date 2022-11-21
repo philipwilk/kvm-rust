@@ -25,10 +25,10 @@ pub async fn create_vm(kvm_fd: RawFd, memory_size: usize) {
     // create the vm
     unsafe { create_vm_fd(kvm_fd, 0).expect("create_vm_fd_ERROR") };
     // assign memory to vm
-    let ram_region: KvmUserspaceMemoryRegion = define_ram_region(8192, memory_size).await.unwrap();
+    let ram_region = define_ram_region(8192, memory_size).unwrap();
     ioctl_write_int_bad!(
         set_memory_region,
-        request_code_write!(KVM_IOCTL_ID, KVM_SET_USER_MEMORY_REGION, &|| { ram_region })
+        request_code_write!(KVM_IOCTL_ID, KVM_SET_USER_MEMORY_REGION, ram_region)
     );
 }
 
@@ -36,7 +36,7 @@ pub async fn create_vm(kvm_fd: RawFd, memory_size: usize) {
     Set aside memory region for the virtual machine
     Result -> Done, invalid data input or error
 */
-pub async fn define_ram_region(
+pub fn define_ram_region(
     available_capacity: usize,
     guest_capacity: usize,
 ) -> Result<KvmUserspaceMemoryRegion, String> {
@@ -50,12 +50,9 @@ pub async fn define_ram_region(
     }
     // convert mebibytes to bytes
     let memory_size: usize = guest_capacity * 1048576;
-    /*
-        TODO: Check protflagss and mapflags implementations to correctly perform bitwise
-    */
-    let prot_flags: ProtFlags = PROT_READ | PROT_WRITE;
-    let map_flags: MapFlags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
-    let mem = unsafe { mmap(*ptr::null(), memory_size, prot_flags, map_flags, -1, 0) };
+    let prot_flags = ProtFlags::from_bits(PROT_READ | PROT_WRITE).unwrap();
+    let map_flags = MapFlags::from_bits(MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE).unwrap();
+    let mem = unsafe { mmap(*ptr::null(), memory_size, prot_flags, map_flags, -1, 0) }.unwrap();
 
     Ok(KvmUserspaceMemoryRegion {
         slot: 0,
