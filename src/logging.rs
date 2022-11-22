@@ -65,12 +65,7 @@ pub async fn get_parsed_preflights(
     _level: Severity,
     _modifiers: Vec<String>,
 ) -> Vec<(Severity, String, String)> {
-    async_parse_logs_to_severity(
-        get_startup_checks(get_kvm_fd().await).await,
-        _level,
-        _modifiers,
-    )
-    .await
+    async_parse_logs_to_severity(get_startup_checks(get_kvm_fd()).await, _level, _modifiers).await
 }
 
 // TODO: function that acts on logs (attempt recovery/resolution)
