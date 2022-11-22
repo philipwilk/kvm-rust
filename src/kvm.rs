@@ -36,9 +36,9 @@ pub async fn create_vm(kvm_fd: RawFd) {
         ),
         KvmUserspaceMemoryRegion
     );
-    unsafe {
-        set_memory_region(kvm_fd, &ram_region).expect("set_memory_region_ERROR");
-    };
+    let ret: i32 =
+        unsafe { set_memory_region(kvm_fd, &ram_region).expect("set_memory_region_ERROR") };
+    println!("{ret}");
 }
 
 /*
@@ -52,9 +52,9 @@ fn define_ram_region(capacity: usize) -> Result<KvmUserspaceMemoryRegion, String
     Ok(KvmUserspaceMemoryRegion {
         slot: 0,
         flags: 0,
-        guest_phys_addr: 0,
-        memory_size: capacity as __u64,
-        userspace_addr: mem as __u64,
+        guest_phys_addr: 0, // why does this become 0x10000 if you run an strace
+        memory_size: capacity as __u64, // this also just pops off
+        userspace_addr: mem as __u64, // this does not exist
     })
 }
 
