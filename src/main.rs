@@ -42,5 +42,5 @@ async fn main_async() {
     /*
         Use db data to decide what todo
     */
-    create_vm(get_kvm_fd()).await;
+    create_vm(get_kvm_fd(), 0x10000).await;
 }
