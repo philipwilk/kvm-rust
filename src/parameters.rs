@@ -167,13 +167,11 @@ async fn parse_parameters(arguments: Args) -> Result<HashMap<Parameters, String>
                 "Use of key+value parameter as boolean parameter: ".to_owned() + &parsed_front_key,
             );
         }
-        if key_format == KeyFormat::Equals {
-            if param_is_bool_type(&front_key) {
-                if equals_val.to_lowercase() == "true" {
-                    equals_val = "True".to_owned();
-                } else if equals_val.to_lowercase() == "false" {
-                    equals_val = "False".to_owned();
-                }
+        if key_format == KeyFormat::Equals && param_is_bool_type(&front_key) {
+            if equals_val.to_lowercase() == "true" {
+                equals_val = "True".to_owned();
+            } else if equals_val.to_lowercase() == "false" {
+                equals_val = "False".to_owned();
             }
         }
         if key_format == KeyFormat::Boolean {
