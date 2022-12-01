@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 #![feature(stmt_expr_attributes)]
-nix = "0.24.2"
-sea-orm = { version = "0.9.3", features = [ "sqlx-mysql", "runtime-tokio-native-tls", "macros"  ] }
+nix = "0.26.1"
+sea-orm = { version = "0.10.2", features = [ "sqlx-mysql", "runtime-tokio-native-tls", "macros"  ] }
 futures = "0.3"
 async-std = { version = "1.12.0", features = ["attributes", "tokio1"]}
-sea-orm-migration = { version = "0.9.3", features = [ "sqlx-mysql", "runtime-tokio-native-tls"]}
+sea-orm-migration = { version = "0.10.2", features = [ "sqlx-mysql", "runtime-tokio-native-tls"]}
 regex = "^1.0.0"
 lazy_static = "1.4.0"
 exitcode = "1.1.2"
