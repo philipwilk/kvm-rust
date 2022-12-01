@@ -1,4 +1,3 @@
-use nix::libc::{__u32, __u64};
 // KVM ioctl id
 pub const KVM_IOCTL_ID: i32 = 0xAE;
 // ioctl sequence numbers
@@ -8,10 +7,11 @@ pub const KVM_SET_USER_MEMORY_REGION: i32 = 0x46;
 
 // Structs
 #[derive(Debug)]
+#[repr(C)]
 pub struct KvmUserspaceMemoryRegion {
-    pub slot: __u32,
-    pub flags: __u32,
-    pub guest_phys_addr: __u64,
-    pub memory_size: __u64,
-    pub userspace_addr: __u64,
+    pub slot: u32,
+    pub flags: u32,
+    pub guest_phys_addr: u64,
+    pub memory_size: u64,
+    pub userspace_addr: u64,
 }
